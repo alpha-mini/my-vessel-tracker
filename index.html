@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Vessel Tracker Dashboard</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        #map { height: 400px; width: 100%; border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+        th { background-color: #007bff; color: white; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+    </style>
+</head>
+<body>
+
+    <h2>Live Vessel Tracker</h2>
+    <div id="map"></div>
+
+    <h3>Movement History</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Timestamp (UTC)</th>
+                <th>Latitude</th>
+                <th>Longitude</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+    </table>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        var map = L.map('map').setView([0, 0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+        fetch('vessels.json')
+            .then(response => response.json())
+            .then(data => {
+                const tableBody = document.getElementById('tableBody');
+                
+                // Reverse to show newest first
+                const history = data.reverse();
+
+                // Add Marker for the latest position
+                if (history.length > 0) {
+                    const latest = history[0];
+                    L.marker([latest.lat, latest.lon]).addTo(map)
+                        .bindPopup(`<b>${latest.name}</b><br>${latest.timestamp}`)
+                        .openPopup();
+                    map.setView([latest.lat, latest.lon], 6);
+                }
+
+                // Populate Table
+                history.forEach(entry => {
+                    let row = `<tr>
+                        <td>${entry.timestamp}</td>
+                        <td>${entry.lat}</td>
+                        <td>${entry.lon}</td>
+                    </tr>`;
+                    tableBody.innerHTML += row;
+                });
+            })
+            .catch(err => console.log('Waiting for data...'));
+    </script>
+</body>
+</html>
