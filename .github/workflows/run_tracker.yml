@@ -1,35 +1,7 @@
-name: Vessel Tracking Bot
-permissions:
-  contents: write    # Vital: Allows the bot to save the CSV file
-on:
-  schedule:
-    - cron: '0 0,6,12,18 * * *'  # Runs 4 times a day (UTC)
-  workflow_dispatch:              # Allows you to click "Run" manually
-
-jobs:
-  track:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install Dependencies
-        run: |
-          pip install playwright playwright-stealth
-          playwright install chromium
-
-      - name: Run Tracker
-        run: python tracker.py
-
-      - name: Save and Push Data
-        run: |
-          git config --global user.name "VesselBot"
-          git config --global user.email "bot@github.com"
-          git add location_log.csv
-          git commit -m "Auto-update location: $(date)" || exit 0
-          git push
+    - name: Commit and push changes
+      run: |
+        git config --global user.name "GitHub Action"
+        git config --global user.email "action@github.com"
+        git add vessels.json
+        git commit -m "Update vessel position" || exit 0
+        git push
