@@ -1,23 +1,33 @@
-import asyncio
-import random
+import json
 import os
-import csv
 from datetime import datetime
-from playwright.async_api import async_playwright
-from playwright_stealth import stealth_async
 
-# The specific URL for Crescent River
-URL = "https://www.marinetraffic.com/en/ais/details/ships/shipid:5178657/mmsi:563079500/imo:9800726/vessel:CRESCENT_RIVER"
+# This is a simplified mock-up of the logic to save data
+# Ensure your AISStream logic feeds into the 'new_data' variable
+def save_vessel_data(lat, lon, name="My Vessel"):
+    file_name = 'vessels.json'
+    timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+    
+    new_entry = {
+        "timestamp": timestamp,
+        "name": name,
+        "lat": lat,
+        "lon": lon
+    }
 
-USER_AGENTS = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
-]
+    # Load existing data or start a new list
+    if os.path.exists(file_name):
+        with open(file_name, 'r') as f:
+            data = json.load(f)
+    else:
+        data = []
 
-async def get_vessel_data():
-    # Anti-ban: Wait 1-5 mins if running on GitHub to look human
-    if os.getenv("GITHUB_ACTIONS"):
-        await asyncio.sleep(random.randint(60, 300))
+    # Keep only the last 100 positions to save space
+    data.append(new_entry)
+    data = data[-100:]
 
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True
+    with open(file_name, 'w') as f:
+        json.dump(data, f, indent=4)
+
+# Example usage (Replace with your actual AIS parsing logic)
+save_vessel_data(51.505, -0.09) 
