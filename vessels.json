@@ -376,5 +376,11 @@
         "name": "My Vessel",
         "lat": 51.505,
         "lon": -0.09
+    },
+    {
+        "timestamp": "2026-01-12 03:30:36",
+        "name": "My Vessel",
+        "lat": 51.505,
+        "lon": -0.09
     }
 ]
