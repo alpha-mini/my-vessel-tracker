@@ -1,11 +1,5 @@
 [
     {
-        "timestamp": "2026-04-09 06:14:57",
-        "name": "My Vessel",
-        "lat": 51.505,
-        "lon": -0.09
-    },
-    {
         "timestamp": "2026-04-09 08:12:23",
         "name": "My Vessel",
         "lat": 51.505,
@@ -595,6 +589,12 @@
     },
     {
         "timestamp": "2026-04-14 22:37:02",
+        "name": "My Vessel",
+        "lat": 51.505,
+        "lon": -0.09
+    },
+    {
+        "timestamp": "2026-04-14 23:35:15",
         "name": "My Vessel",
         "lat": 51.505,
         "lon": -0.09
