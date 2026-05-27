@@ -1,67 +1,109 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Vessel Tracker Dashboard</title>
+    <meta charset="UTF-8">
+    <title>Vessel Tracker - Crescent River</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { font-family: sans-serif; margin: 20px; }
-        #map { height: 400px; width: 100%; border-radius: 8px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
-        th { background-color: #007bff; color: white; }
-        tr:nth-child(even) { background-color: #f9f9f9; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; padding: 20px; background: #f4f6f8; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h2 { color: #1a2a3a; margin-bottom: 5px; }
+        .subtitle { color: #666; margin-bottom: 20px; font-size: 14px; }
+        .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-left: 8px; vertical-align: middle; }
+        .badge-mt { background: #e3f2fd; color: #1565c0; }
+        .badge-va { background: #e8f5e9; color: #2e7d32; }
+        .badge-unknown { background: #f5f5f5; color: #666; }
+        #map { height: 450px; width: 100%; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); font-size: 14px; }
+        th, td { padding: 10px 14px; text-align: left; }
+        th { background-color: #1a2a3a; color: white; font-weight: 500; }
+        tr:nth-child(even) { background-color: #f8f9fa; }
+        tr:hover { background-color: #eef2f5; }
+        td { border-bottom: 1px solid #eee; }
+        .empty { color: #999; padding: 40px; text-align: center; }
+        .meta { font-size: 12px; color: #888; margin-top: 15px; text-align: center; }
+        .legend { display: flex; gap: 15px; margin-bottom: 10px; font-size: 12px; color: #666; }
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .legend-line { width: 20px; height: 3px; background: #1a73e8; opacity: 0.7; }
     </style>
 </head>
 <body>
+    <div class="container">
+        <h2>
+            Crescent River (IMO 9800726)
+            <span id="sourceBadge" class="badge badge-unknown">Loading...</span>
+        </h2>
+        <p class="subtitle">MMSI: 563079500 | Crude Oil Tanker | Singapore Flag | LOA: 243.8m</p>
 
-    <h2>Live Vessel Tracker</h2>
-    <div id="map"></div>
+        <div class="legend">
+            <div class="legend-item"><div class="legend-line"></div> Voyage path</div>
+        </div>
+        <div id="map"></div>
 
-    <h3>Movement History</h3>
-    <table>
-        <thead>
-            <tr>
-                <th>Timestamp (UTC)</th>
-                <th>Latitude</th>
-                <th>Longitude</th>
-            </tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-    </table>
+        <h3>Position History</h3>
+        <table>
+            <thead>
+                <tr><th>Timestamp (UTC)</th><th>Latitude</th><th>Longitude</th><th>Source</th></tr>
+            </thead>
+            <tbody id="tableBody">
+                <tr><td colspan="4" class="empty">Loading data...</td></tr>
+            </tbody>
+        </table>
+        <p class="meta" id="metaInfo"></p>
+    </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         var map = L.map('map').setView([0, 0], 2);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18, attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        var vesselIcon = L.divIcon({
+            html: '<div style="font-size:22px;">&#128674;</div>',
+            iconSize: [28, 28], className: 'vessel-marker'
+        });
 
         fetch('vessels.json')
-            .then(response => response.json())
+            .then(r => { if (!r.ok) throw new Error('No data file'); return r.json(); })
             .then(data => {
-                const tableBody = document.getElementById('tableBody');
-                
-                // Reverse to show newest first
-                const history = data.reverse();
+                if (!Array.isArray(data) || data.length === 0) {
+                    document.getElementById('tableBody').innerHTML =
+                        '<tr><td colspan="4" class="empty">No tracking data yet. Run the tracker first.</td></tr>';
+                    return;
+                }
+                var history = [...data].reverse();
+                var latest = history[0];
+                var badge = document.getElementById('sourceBadge');
+                var src = (latest.source || '').toLowerCase();
+                badge.textContent = src.includes('marinetraffic') ? 'MarineTraffic' :
+                                    src.includes('vesselapi') ? 'VesselAPI' : (latest.source || 'Unknown');
+                badge.className = 'badge badge-' + (src.includes('marinetraffic') ? 'mt' :
+                                  src.includes('vesselapi') ? 'va' : 'unknown');
 
-                // Add Marker for the latest position
-                if (history.length > 0) {
-                    const latest = history[0];
-                    L.marker([latest.lat, latest.lon]).addTo(map)
-                        .bindPopup(`<b>${latest.name}</b><br>${latest.timestamp}`)
-                        .openPopup();
+                if (latest.lat && latest.lon) {
+                    L.marker([latest.lat, latest.lon], { icon: vesselIcon })
+                        .addTo(map).bindPopup('<b>' + (latest.name || 'Vessel') + '</b><br>' + latest.timestamp).openPopup();
                     map.setView([latest.lat, latest.lon], 6);
                 }
+                var points = data.filter(p => p.lat && p.lon).map(p => [p.lat, p.lon]);
+                if (points.length > 1) L.polyline(points, { color: '#1a73e8', weight: 3, opacity: 0.7 }).addTo(map);
 
-                // Populate Table
-                history.forEach(entry => {
-                    let row = `<tr>
-                        <td>${entry.timestamp}</td>
-                        <td>${entry.lat}</td>
-                        <td>${entry.lon}</td>
-                    </tr>`;
-                    tableBody.innerHTML += row;
+                var tbody = document.getElementById('tableBody');
+                tbody.innerHTML = '';
+                history.forEach(e => {
+                    var s = e.source || '-';
+                    tbody.innerHTML += '<tr><td>' + (e.timestamp || '-') + '</td><td>' + (e.lat ?? '-') +
+                        '</td><td>' + (e.lon ?? '-') + '</td><td>' + s + '</td></tr>';
                 });
+                document.getElementById('metaInfo').textContent = data.length + ' records | First: ' +
+                    (data[0].timestamp || '?') + ' | Latest: ' + (data[data.length-1].timestamp || '?');
             })
-            .catch(err => console.log('Waiting for data...'));
+            .catch(err => {
+                console.error(err);
+                document.getElementById('tableBody').innerHTML =
+                    '<tr><td colspan="4" class="empty">Failed: ' + err.message + '</td></tr>';
+            });
     </script>
 </body>
 </html>
