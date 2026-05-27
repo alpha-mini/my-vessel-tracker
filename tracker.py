@@ -1,34 +1,39 @@
-import json
-import os
-from datetime import datetime
+name: Vessel Tracker Update
 
-# This is a simplified mock-up of the logic to save data
-# Ensure your AISStream logic feeds into the 'new_data' variable
-def save_vessel_data(lat, lon, name="My Vessel"):
-    file_name = 'vessels.json'
-    timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-    
-    new_entry = {
-        "timestamp": timestamp,
-        "name": name,
-        "lat": lat,
-        "lon": lon
-    }
+on:
+  schedule:
+    - cron: '0 * * * *'       # Runs every hour
+  workflow_dispatch:           # Allows manual trigger
 
-    # Load existing data or start a new list
-    if os.path.exists(file_name):
-        with open(file_name, 'r') as f:
-            data = json.load(f)
-    else:
-        data = []
+permissions:
+  contents: write
 
-    # Keep only the last 100 positions to save space
-    data.append(new_entry)
-    data = data[-100:]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    with open(file_name, 'w') as f:
-        json.dump(data, f, indent=4)
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-# Example usage (Replace with your actual AIS parsing logic)
-save_vessel_data(51.505, -0.09) 
-#12
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run Tracker
+        # No API key needed for MarineTraffic!
+        # If you want to use VesselAPI as backup, add VESSELAPI_KEY secret:
+        # env:
+        #   VESSELAPI_KEY: ${{ secrets.VESSELAPI_KEY }}
+        run: python tracker.py
+
+      - name: Commit and Push Data
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "actions@github.com"
+          git add vessels.json
+          git commit -m "Update vessel data" || exit 0
+          git push
